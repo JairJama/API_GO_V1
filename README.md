@@ -30,8 +30,6 @@ API base en Go para demostrar autenticacion, sesiones, autorizacion, aislamiento
 - Registro de `request_id`, actor, acción, resultado, ruta, método y código HTTP.
 - Validación final de Docker, Nginx, PostgreSQL, autenticación, autorización, aislamiento y auditoría.
 
-El Paso 4, recuperación de contraseña, fue dejado pendiente intencionalmente para esta iteración. La autorización por organización y recurso ya está implementada en el Paso 6.
-El Paso 8, tokens Bearer y cuentas técnicas, también fue dejado pendiente por decisión de alcance.
 
 ## Ejecutar
 
