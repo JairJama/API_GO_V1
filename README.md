@@ -4,7 +4,6 @@ API base en Go para demostrar autenticacion, sesiones, autorizacion, aislamiento
 
 ## Estado actual
 
-Implementados y validados los Pasos 1, 2, 3, 5, 6, 7 y 9:
 
 - Servidor HTTP con `net/http`.
 - Endpoint `GET /healthz`.
