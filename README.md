@@ -4,7 +4,6 @@ API base en Go para demostrar autenticacion, sesiones, autorizacion, aislamiento
 
 ## Estado actual
 
-Implementados y validados los Pasos 1, 2, 3, 4, 5, 6, 7, 8 y 9:
 
 - Servidor HTTP con `net/http`.
 - Endpoint `GET /healthz`.
@@ -36,6 +35,7 @@ Implementados y validados los Pasos 1, 2, 3, 4, 5, 6, 7, 8 y 9:
 - Roles y permisos para cuentas técnicas, scopes restrictivos y acceso técnico inicial de solo lectura a documentos.
 - Registro de `request_id`, actor, acción, resultado, ruta, método y código HTTP.
 - Validación final de Docker, Nginx, PostgreSQL, autenticación, autorización, aislamiento y auditoría.
+
 
 ## Ejecutar
 
