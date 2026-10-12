@@ -8,12 +8,15 @@ import (
 )
 
 type Config struct {
-	HTTPAddr     string
-	DatabaseURL  string
-	DBMaxConns   int32
-	PasswordCost int
-	SessionTTL   time.Duration
-	CookieSecure bool
+	HTTPAddr             string
+	DatabaseURL          string
+	DBMaxConns           int32
+	PasswordCost         int
+	SessionTTL           time.Duration
+	CookieSecure         bool
+	AppEnvironment       string
+	PasswordResetTTL     time.Duration
+	PasswordResetURLBase string
 }
 
 func Load() (Config, error) {
@@ -34,14 +37,21 @@ func Load() (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
+	passwordResetTTL, err := durationEnv("PASSWORD_RESET_TTL", time.Hour)
+	if err != nil {
+		return Config{}, err
+	}
 
 	return Config{
-		HTTPAddr:     getenv("HTTP_ADDR", ":8080"),
-		DatabaseURL:  databaseURL,
-		DBMaxConns:   4,
-		PasswordCost: passwordCost,
-		SessionTTL:   sessionTTL,
-		CookieSecure: cookieSecure,
+		HTTPAddr:             getenv("HTTP_ADDR", ":8080"),
+		DatabaseURL:          databaseURL,
+		DBMaxConns:           4,
+		PasswordCost:         passwordCost,
+		SessionTTL:           sessionTTL,
+		CookieSecure:         cookieSecure,
+		AppEnvironment:       getenv("APP_ENV", "development"),
+		PasswordResetTTL:     passwordResetTTL,
+		PasswordResetURLBase: getenv("PASSWORD_RESET_URL_BASE", "http://localhost:8080"),
 	}, nil
 }
 

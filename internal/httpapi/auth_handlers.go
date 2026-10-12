@@ -10,15 +10,18 @@ import (
 
 	"example.com/go-security-api/internal/audit"
 	"example.com/go-security-api/internal/auth"
+	"example.com/go-security-api/internal/passwordreset"
 )
 
 const sessionCookieName = "sid"
 
-func registerAuthRoutes(mux *http.ServeMux, service *auth.Service, auditor *audit.Service, cookieSecure bool) {
+func registerAuthRoutes(mux *http.ServeMux, service *auth.Service, passwordReset *passwordreset.Service, auditor *audit.Service, cookieSecure bool) {
 	mux.HandleFunc("POST /api/v1/auth/register", registerHandler(service, auditor))
 	mux.HandleFunc("POST /api/v1/auth/login", loginHandler(service, auditor, cookieSecure))
 	mux.HandleFunc("POST /api/v1/auth/logout", logoutHandler(service, auditor, cookieSecure))
 	mux.Handle("GET /api/v1/auth/me", requireSession(service, auditor, http.HandlerFunc(meHandler(auditor))))
+	mux.HandleFunc("POST /api/v1/auth/password/forgot", forgotPasswordHandler(passwordReset, auditor))
+	mux.HandleFunc("POST /api/v1/auth/password/reset", resetPasswordHandler(passwordReset, auditor))
 }
 
 func registerHandler(service *auth.Service, auditor *audit.Service) http.HandlerFunc {
@@ -128,19 +131,21 @@ func requireSession(service *auth.Service, auditor *audit.Service, next http.Han
 			writeError(w, http.StatusServiceUnavailable, "auth_unavailable", "authentication is not configured", r)
 			return
 		}
-		cookie, err := r.Cookie(sessionCookieName)
-		if err != nil || strings.TrimSpace(cookie.Value) == "" {
+
+		cookie, err := r.Cookie(sessionCookieName)               //obtiene el id de la peticion
+		if err != nil || strings.TrimSpace(cookie.Value) == "" { //verifica si el id de la peticion es valido
 			recordAudit(auditor, r, "auth.session", "denied", http.StatusUnauthorized, "session", nil, map[string]any{"reason": "missing_session"})
-			writeError(w, http.StatusUnauthorized, "unauthenticated", "authentication is required", r)
+			writeError(w, http.StatusUnauthorized, "unauthenticated", "authentication is required", r) //escribe el error, 401
 			return
 		}
 
-		user, _, err := service.Authenticate(r.Context(), cookie.Value)
+		user, _, err := service.Authenticate(r.Context(), cookie.Value) //se valida el token de sesion contra la BD
 		if err != nil {
 			recordAudit(auditor, r, "auth.session", "denied", http.StatusUnauthorized, "session", nil, map[string]any{"reason": "invalid_session"})
-			writeError(w, http.StatusUnauthorized, "unauthenticated", "authentication is required", r)
+			writeError(w, http.StatusUnauthorized, "unauthenticated", "authentication is required", r) //escribe el error, 401
 			return
 		}
+		//si es valido se agrega el usuario al contexto y se llama al siguiente handler
 		next.ServeHTTP(w, r.WithContext(auth.WithUser(r.Context(), user)))
 	})
 }

@@ -16,6 +16,7 @@ import (
 	"example.com/go-security-api/internal/config"
 	"example.com/go-security-api/internal/httpapi"
 	"example.com/go-security-api/internal/migrations"
+	"example.com/go-security-api/internal/passwordreset"
 	"example.com/go-security-api/internal/resources"
 	"example.com/go-security-api/internal/store/postgres"
 )
@@ -46,6 +47,18 @@ func main() {
 	)
 	authorization := access.NewService(postgres.NewPermissionStore(database))
 	auditor := audit.NewService(postgres.NewAuditStore(database))
+	var resetMailer passwordreset.PasswordResetMailer = passwordreset.NewUnavailableMailer()
+	if cfg.AppEnvironment == "development" {
+		resetMailer = passwordreset.NewLogMailer(logger, cfg.PasswordResetURLBase)
+	}
+	resetService := passwordreset.NewService(
+		postgres.NewUserStore(database),
+		postgres.NewPasswordResetStore(database),
+		resetMailer,
+		passwordreset.NewMemoryLimiter(3, 5, 15*time.Minute),
+		cfg.PasswordCost,
+		cfg.PasswordResetTTL,
+	)
 	resourceService := resources.NewService(
 		postgres.NewOrganizationStore(database),
 		postgres.NewDocumentStore(database),
@@ -54,7 +67,7 @@ func main() {
 
 	server := &http.Server{
 		Addr:              cfg.HTTPAddr,
-		Handler:           httpapi.NewHandler(database, authentication, authorization, resourceService, auditor, cfg.CookieSecure),
+		Handler:           httpapi.NewHandler(database, authentication, resetService, authorization, resourceService, auditor, cfg.CookieSecure),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,
 		WriteTimeout:      10 * time.Second,

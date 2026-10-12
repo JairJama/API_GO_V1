@@ -18,22 +18,22 @@ func registerAccessRoutes(mux *http.ServeMux, authentication *auth.Service, auth
 func requirePermission(service *access.Service, auditor *audit.Service, permission string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if service == nil {
-			recordAudit(auditor, r, "authorization.check", "failure", http.StatusServiceUnavailable, "permission", nil, map[string]any{"permission": permission, "reason": "service_unavailable"})
-			writeError(w, http.StatusServiceUnavailable, "authorization_unavailable", "authorization is not configured", r)
+			recordAudit(auditor, r, "authorization.check", "failure", http.StatusServiceUnavailable, "permission", nil, map[string]any{"permission": permission, "reason": "service_unavailable"}) //escribe el error, 503
+			writeError(w, http.StatusServiceUnavailable, "authorization_unavailable", "authorization is not configured", r)                                                                        //escribe el error, 503
 			return
 		}
 
-		user, ok := auth.UserFromContext(r.Context())
+		user, ok := auth.UserFromContext(r.Context()) //obtiene el usuario del contexto
 		if !ok {
 			recordAudit(auditor, r, "authorization.check", "denied", http.StatusUnauthorized, "permission", nil, map[string]any{"permission": permission, "reason": "missing_user"})
-			writeError(w, http.StatusUnauthorized, "unauthenticated", "authentication is required", r)
+			writeError(w, http.StatusUnauthorized, "unauthenticated", "authentication is required", r) //escribe el error, 401
 			return
 		}
 
-		allowed, err := service.Has(r.Context(), user.ID, permission)
+		allowed, err := service.Has(r.Context(), user.ID, permission) //se valida el permiso
 		if err != nil {
 			recordAuditForUser(auditor, r, user, "authorization.check", "failure", http.StatusInternalServerError, "permission", nil, map[string]any{"permission": permission, "reason": "permission_lookup_failed"})
-			writeError(w, http.StatusInternalServerError, "authorization_failed", "authorization could not be evaluated", r)
+			writeError(w, http.StatusInternalServerError, "authorization_failed", "authorization could not be evaluated", r) //escribe el error, 500
 			return
 		}
 		if !allowed {
@@ -43,7 +43,7 @@ func requirePermission(service *access.Service, auditor *audit.Service, permissi
 		}
 
 		recordAuditForUser(auditor, r, user, "authorization.allowed", "success", http.StatusOK, "permission", nil, map[string]any{"permission": permission})
-		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), accessServiceKey{}, service)))
+		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), accessServiceKey{}, service))) //se agrega el permiso al contexto y se llama al siguiente handler
 	})
 }
 
