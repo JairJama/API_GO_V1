@@ -38,11 +38,11 @@ func NewService(users UserStore, sessions SessionStore, cfg Config) *Service {
 }
 
 func (s *Service) Register(ctx context.Context, email, password string) (User, error) {
-	normalized, err := normalizeEmail(email)
+	normalized, err := NormalizeEmail(email)
 	if err != nil {
 		return User{}, err
 	}
-	if err := validatePassword(password); err != nil {
+	if err := ValidatePassword(password); err != nil {
 		return User{}, err
 	}
 
@@ -54,7 +54,7 @@ func (s *Service) Register(ctx context.Context, email, password string) (User, e
 }
 
 func (s *Service) Login(ctx context.Context, email, password, userAgent, ipAddress string) (User, string, time.Time, error) {
-	normalized, err := normalizeEmail(email)
+	normalized, err := NormalizeEmail(email)
 	if err != nil {
 		return User{}, "", time.Time{}, ErrInvalidCredentials
 	}
@@ -123,7 +123,8 @@ func (s *Service) Logout(ctx context.Context, rawToken string) error {
 	return s.sessions.Revoke(ctx, sessionID)
 }
 
-func normalizeEmail(email string) (string, error) {
+// NormalizeEmail applies the same email rules to all authentication flows.
+func NormalizeEmail(email string) (string, error) {
 	normalized := strings.ToLower(strings.TrimSpace(email))
 	parsed, err := mail.ParseAddress(normalized)
 	if err != nil || parsed.Address != normalized || !strings.Contains(normalized, "@") {
@@ -132,7 +133,8 @@ func normalizeEmail(email string) (string, error) {
 	return normalized, nil
 }
 
-func validatePassword(password string) error {
+// ValidatePassword enforces the password policy shared by registration and reset.
+func ValidatePassword(password string) error {
 	if len(password) < 8 || len(password) > 72 {
 		return ErrInvalidInput
 	}

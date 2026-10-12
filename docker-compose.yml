@@ -9,6 +9,9 @@ services:
       BCRYPT_COST: "12"
       SESSION_TTL: "12h"
       COOKIE_SECURE: "false"
+      APP_ENV: "development"
+      PASSWORD_RESET_TTL: "1h"
+      PASSWORD_RESET_URL_BASE: "http://localhost:8080"
     expose:
       - "8080"
     depends_on:

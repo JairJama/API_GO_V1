@@ -11,17 +11,18 @@ import (
 	"example.com/go-security-api/internal/access"
 	"example.com/go-security-api/internal/audit"
 	"example.com/go-security-api/internal/auth"
+	"example.com/go-security-api/internal/passwordreset"
 	"example.com/go-security-api/internal/resources"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func NewHandler(database *pgxpool.Pool, authentication *auth.Service, authorization *access.Service, resourceService *resources.Service, auditor *audit.Service, cookieSecure bool) http.Handler {
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /healthz", healthHandler)
-	mux.HandleFunc("GET /readyz", readyHandler(database))
-	registerAuthRoutes(mux, authentication, auditor, cookieSecure)
-	registerAccessRoutes(mux, authentication, authorization, auditor)
-	registerResourceRoutes(mux, authentication, resourceService, auditor)
+func NewHandler(database *pgxpool.Pool, authentication *auth.Service, passwordReset *passwordreset.Service, authorization *access.Service, resourceService *resources.Service, auditor *audit.Service, cookieSecure bool) http.Handler {
+	mux := http.NewServeMux()                                                     //Este es el router, asigna rutas a handlers
+	mux.HandleFunc("GET /healthz", healthHandler)                                 //rutas basicas para saber si el servidor esta vivo
+	mux.HandleFunc("GET /readyz", readyHandler(database))                         //rutas basicas para saber si el servidor esta listo
+	registerAuthRoutes(mux, authentication, passwordReset, auditor, cookieSecure) //registro de rutas de autenticacion
+	registerAccessRoutes(mux, authentication, authorization, auditor)             //registro de rutas de permisos
+	registerResourceRoutes(mux, authentication, resourceService, auditor)         //registro de rutas de recursos
 
 	return securityHeaders(requestID(mux))
 }
@@ -71,22 +72,22 @@ const requestIDKey contextKey = "request_id"
 
 func requestID(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		id := r.Header.Get("X-Request-ID")
+		id := r.Header.Get("X-Request-ID") //obtiene el id de la peticion
 		if id == "" {
-			id = newRequestID()
+			id = newRequestID() //genera un nuevo id si no existe
 		}
 
-		w.Header().Set("X-Request-ID", id)
-		ctx := withRequestIDContext(r.Context(), id)
-		next.ServeHTTP(w, r.WithContext(ctx))
+		w.Header().Set("X-Request-ID", id)           //establece el id de la peticion
+		ctx := withRequestIDContext(r.Context(), id) //crea un nuevo contexto con el id de la peticion
+		next.ServeHTTP(w, r.WithContext(ctx))        //llama al siguiente handler con el nuevo contexto
 	})
 }
 
 func securityHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("X-Content-Type-Options", "nosniff")
-		w.Header().Set("X-Frame-Options", "DENY")
-		w.Header().Set("Referrer-Policy", "no-referrer")
+		w.Header().Set("X-Content-Type-Options", "nosniff") // No permite que el navegador adivine el tipo de archivo
+		w.Header().Set("X-Frame-Options", "DENY")           // No permite que la pagina se cargue dentro de un iframe
+		w.Header().Set("Referrer-Policy", "no-referrer")    // No envia el url de origen al hacer requests
 		next.ServeHTTP(w, r)
 	})
 }

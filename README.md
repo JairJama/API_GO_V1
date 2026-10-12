@@ -4,7 +4,7 @@ API base en Go para demostrar autenticacion, sesiones, autorizacion, aislamiento
 
 ## Estado actual
 
-Implementados y validados los Pasos 1, 2, 3, 5, 6, 7 y 9:
+Implementados y validados los Pasos 1, 2, 3, 4, 5, 6, 7 y 9:
 
 - Servidor HTTP con `net/http`.
 - Endpoint `GET /healthz`.
@@ -20,6 +20,9 @@ Implementados y validados los Pasos 1, 2, 3, 5, 6, 7 y 9:
 - Registro, login, logout y `GET /api/v1/auth/me`.
 - Sesiones server side con cookie HttpOnly.
 - Revocación por sesión y por `session_version`.
+- Recuperación de contraseña con token opaco de un solo uso, almacenado solo como hash SHA-256.
+- Expiración de token configurable (una hora por defecto), invalidación de tokens anteriores y revocación de todas las sesiones al completar el cambio.
+- Mailer de desarrollo que escribe el enlace solo cuando `APP_ENV=development`; en otros entornos queda deshabilitado hasta configurar un proveedor SMTP.
 - Roles, permisos y asignaciones explícitas mediante RBAC.
 - Middleware de autorización basado en permisos efectivos.
 - Endpoint de demostración `GET /api/v1/admin/access`.
@@ -31,7 +34,6 @@ Implementados y validados los Pasos 1, 2, 3, 5, 6, 7 y 9:
 - Registro de `request_id`, actor, acción, resultado, ruta, método y código HTTP.
 - Validación final de Docker, Nginx, PostgreSQL, autenticación, autorización, aislamiento y auditoría.
 
-El Paso 4, recuperación de contraseña, fue dejado pendiente intencionalmente para esta iteración. La autorización por organización y recurso ya está implementada en el Paso 6.
 El Paso 8, tokens Bearer y cuentas técnicas, también fue dejado pendiente por decisión de alcance.
 
 ## Ejecutar
@@ -48,6 +50,10 @@ Registrar un usuario: `POST /api/v1/auth/register`.
 
 Iniciar sesión: `POST /api/v1/auth/login`.
 
+Solicitar recuperación de contraseña: `POST /api/v1/auth/password/forgot` con `{"email":"usuario@example.com"}`. La respuesta siempre es `202 Accepted` cuando el mailer está disponible. En desarrollo, revisar los logs del contenedor API para obtener el enlace de prueba; no usar este mecanismo en producción.
+
+Cambiar contraseña: `POST /api/v1/auth/password/reset` con `{"token":"...","password":"nueva-clave-segura"}`. Una solicitud correcta devuelve `204 No Content`.
+
 Consultar la sesión: `GET /api/v1/auth/me`.
 
 Consultar la autorización efectiva de un usuario administrador: `GET /api/v1/admin/access`.
@@ -59,6 +65,8 @@ Crear un documento: `POST /api/v1/organizations/{organization_id}/documents`.
 Consultar, actualizar o eliminar un documento: `GET`, `PATCH` o `DELETE` en `/api/v1/organizations/{organization_id}/documents/{document_id}`.
 
 Los eventos de auditoría se almacenan en PostgreSQL en la tabla `audit_logs` y no tienen endpoint público en esta etapa.
+
+Variables de recuperación: `APP_ENV`, `PASSWORD_RESET_TTL` y `PASSWORD_RESET_URL_BASE`. Para producción, establecer `APP_ENV` distinto de `development` y sustituir el mailer de logs por una implementación SMTP antes de habilitar la recuperación.
 
 Ejecutar pruebas locales: `go test ./...`.
 
