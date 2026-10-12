@@ -18,6 +18,7 @@ import (
 	"example.com/go-security-api/internal/migrations"
 	"example.com/go-security-api/internal/passwordreset"
 	"example.com/go-security-api/internal/resources"
+	"example.com/go-security-api/internal/serviceaccounts"
 	"example.com/go-security-api/internal/store/postgres"
 )
 
@@ -59,6 +60,11 @@ func main() {
 		cfg.PasswordCost,
 		cfg.PasswordResetTTL,
 	)
+	serviceAccounts, err := serviceaccounts.NewService(postgres.NewServiceAccountStore(database), cfg.APITokenPepper)
+	if err != nil {
+		logger.Error("service account configuration failed", "error", err)
+		os.Exit(1)
+	}
 	resourceService := resources.NewService(
 		postgres.NewOrganizationStore(database),
 		postgres.NewDocumentStore(database),
@@ -67,7 +73,7 @@ func main() {
 
 	server := &http.Server{
 		Addr:              cfg.HTTPAddr,
-		Handler:           httpapi.NewHandler(database, authentication, resetService, authorization, resourceService, auditor, cfg.CookieSecure),
+		Handler:           httpapi.NewHandler(database, authentication, resetService, serviceAccounts, authorization, resourceService, auditor, cfg.CookieSecure),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,
 		WriteTimeout:      10 * time.Second,

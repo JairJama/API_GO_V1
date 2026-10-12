@@ -44,6 +44,13 @@ func (f *fakeDocumentStore) FindVisibleDocument(context.Context, uuid.UUID, uuid
 	return f.document, nil
 }
 
+func (f *fakeDocumentStore) FindDocumentInOrganization(context.Context, uuid.UUID, uuid.UUID) (Document, error) {
+	if !f.visible {
+		return Document{}, ErrDocumentNotFound
+	}
+	return f.document, nil
+}
+
 func (f *fakeDocumentStore) UpdateDocument(_ context.Context, _ uuid.UUID, _ uuid.UUID, _ uuid.UUID, title, content string) (Document, error) {
 	f.updated = true
 	f.updateTitle = title

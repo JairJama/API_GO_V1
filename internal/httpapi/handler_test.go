@@ -20,7 +20,7 @@ func TestHealthz(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	request := httptest.NewRequest(http.MethodGet, "/healthz", nil)
 
-	NewHandler(nil, nil, nil, nil, nil, nil, false).ServeHTTP(recorder, request)
+	NewHandler(nil, nil, nil, nil, nil, nil, nil, false).ServeHTTP(recorder, request)
 
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("expected status 200, got %d", recorder.Code)
@@ -49,7 +49,7 @@ func TestRequestIDIsPropagated(t *testing.T) {
 	request := httptest.NewRequest(http.MethodGet, "/healthz", nil)
 	request.Header.Set("X-Request-ID", "test-request-id")
 
-	NewHandler(nil, nil, nil, nil, nil, nil, false).ServeHTTP(recorder, request)
+	NewHandler(nil, nil, nil, nil, nil, nil, nil, false).ServeHTTP(recorder, request)
 
 	if got := recorder.Header().Get("X-Request-ID"); got != "test-request-id" {
 		t.Fatalf("expected propagated request id, got %q", got)
@@ -60,7 +60,7 @@ func TestReadyzWithoutDatabaseIsUnavailable(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	request := httptest.NewRequest(http.MethodGet, "/readyz", nil)
 
-	NewHandler(nil, nil, nil, nil, nil, nil, false).ServeHTTP(recorder, request)
+	NewHandler(nil, nil, nil, nil, nil, nil, nil, false).ServeHTTP(recorder, request)
 
 	if recorder.Code != http.StatusServiceUnavailable {
 		t.Fatalf("expected status 503, got %d", recorder.Code)
@@ -110,7 +110,7 @@ func TestPasswordResetHTTPFlowIsOpaqueAndSingleUse(t *testing.T) {
 	store := &passwordResetHTTPStore{user: user}
 	mailer := &passwordResetHTTPMailer{}
 	resetService := passwordreset.NewService(passwordResetHTTPUsers{user: user}, store, mailer, nil, bcrypt.MinCost, time.Hour)
-	handler := NewHandler(nil, nil, resetService, nil, nil, nil, false)
+	handler := NewHandler(nil, nil, resetService, nil, nil, nil, nil, false)
 
 	for _, email := range []string{"ana@example.com", "missing@example.com"} {
 		request := httptest.NewRequest(http.MethodPost, "/api/v1/auth/password/forgot", strings.NewReader(`{"email":"`+email+`"}`))

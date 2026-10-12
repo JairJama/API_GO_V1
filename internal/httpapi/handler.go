@@ -13,16 +13,18 @@ import (
 	"example.com/go-security-api/internal/auth"
 	"example.com/go-security-api/internal/passwordreset"
 	"example.com/go-security-api/internal/resources"
+	"example.com/go-security-api/internal/serviceaccounts"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func NewHandler(database *pgxpool.Pool, authentication *auth.Service, passwordReset *passwordreset.Service, authorization *access.Service, resourceService *resources.Service, auditor *audit.Service, cookieSecure bool) http.Handler {
-	mux := http.NewServeMux()                                                     //Este es el router, asigna rutas a handlers
-	mux.HandleFunc("GET /healthz", healthHandler)                                 //rutas basicas para saber si el servidor esta vivo
-	mux.HandleFunc("GET /readyz", readyHandler(database))                         //rutas basicas para saber si el servidor esta listo
-	registerAuthRoutes(mux, authentication, passwordReset, auditor, cookieSecure) //registro de rutas de autenticacion
-	registerAccessRoutes(mux, authentication, authorization, auditor)             //registro de rutas de permisos
-	registerResourceRoutes(mux, authentication, resourceService, auditor)         //registro de rutas de recursos
+func NewHandler(database *pgxpool.Pool, authentication *auth.Service, passwordReset *passwordreset.Service, serviceAccounts *serviceaccounts.Service, authorization *access.Service, resourceService *resources.Service, auditor *audit.Service, cookieSecure bool) http.Handler {
+	mux := http.NewServeMux()                                                              //Este es el router, asigna rutas a handlers
+	mux.HandleFunc("GET /healthz", healthHandler)                                          //rutas basicas para saber si el servidor esta vivo
+	mux.HandleFunc("GET /readyz", readyHandler(database))                                  //rutas basicas para saber si el servidor esta listo
+	registerAuthRoutes(mux, authentication, passwordReset, auditor, cookieSecure)          //registro de rutas de autenticacion
+	registerAccessRoutes(mux, authentication, authorization, auditor)                      //registro de rutas de permisos
+	registerResourceRoutes(mux, authentication, serviceAccounts, resourceService, auditor) //registro de rutas de recursos
+	registerServiceAccountRoutes(mux, authentication, serviceAccounts, authorization, auditor)
 
 	return securityHeaders(requestID(mux))
 }

@@ -30,6 +30,9 @@ API base en Go para demostrar autenticacion, sesiones, autorizacion, aislamiento
 - Aislamiento por organización mediante membresía activa.
 - Policies para distinguir permisos `.own` y `.any`.
 - Auditoría append-only de autenticación, autorización y documentos.
+- Cuentas técnicas separadas de usuarios humanos, asociadas a una organización.
+- Tokens Bearer opacos, revocables y con expiración obligatoria; solo se almacena su HMAC-SHA256 con `API_TOKEN_PEPPER`.
+- Roles y permisos para cuentas técnicas, scopes restrictivos y acceso técnico inicial de solo lectura a documentos.
 - Registro de `request_id`, actor, acción, resultado, ruta, método y código HTTP.
 - Validación final de Docker, Nginx, PostgreSQL, autenticación, autorización, aislamiento y auditoría.
 
@@ -62,9 +65,17 @@ Crear un documento: `POST /api/v1/organizations/{organization_id}/documents`.
 
 Consultar, actualizar o eliminar un documento: `GET`, `PATCH` o `DELETE` en `/api/v1/organizations/{organization_id}/documents/{document_id}`.
 
+Crear o listar cuentas técnicas: `POST` o `GET` en `/api/v1/organizations/{organization_id}/service-accounts`. Requiere sesión humana y `service_accounts.manage`.
+
+Emitir, listar o revocar tokens: `POST`, `GET` o `DELETE` en `/api/v1/service-accounts/{service_account_id}/tokens`. El token plano se entrega únicamente en la respuesta de emisión.
+
+Consumir un documento con una cuenta técnica: enviar `Authorization: Bearer atk_...` a `GET /api/v1/organizations/{organization_id}/documents/{document_id}`. El token requiere el permiso y scope `documents.read` y solo puede consultar su propia organización.
+
 Los eventos de auditoría se almacenan en PostgreSQL en la tabla `audit_logs` y no tienen endpoint público en esta etapa.
 
 Variables de recuperación: `APP_ENV`, `PASSWORD_RESET_TTL` y `PASSWORD_RESET_URL_BASE`. Para producción, establecer `APP_ENV` distinto de `development` y sustituir el mailer de logs por una implementación SMTP antes de habilitar la recuperación.
+
+Variable de tokens: `API_TOKEN_PEPPER` es obligatoria, debe ser un secreto aleatorio largo y no se guarda en PostgreSQL. Rotarla invalida todos los tokens emitidos con el pepper anterior.
 
 Ejecutar pruebas locales: `go test ./...`.
 

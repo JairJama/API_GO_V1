@@ -7,16 +7,21 @@ import (
 
 	"example.com/go-security-api/internal/audit"
 	"example.com/go-security-api/internal/auth"
+	"example.com/go-security-api/internal/principal"
 	"example.com/go-security-api/internal/resources"
+	"example.com/go-security-api/internal/serviceaccounts"
 	"github.com/google/uuid"
 )
 
-func registerResourceRoutes(mux *http.ServeMux, authentication *auth.Service, resourceService *resources.Service, auditor *audit.Service) {
-	mux.Handle("POST /api/v1/organizations", requireSession(authentication, auditor, http.HandlerFunc(createOrganizationHandler(resourceService, auditor))))
-	mux.Handle("POST /api/v1/organizations/{organization_id}/documents", requireSession(authentication, auditor, http.HandlerFunc(createDocumentHandler(resourceService, auditor))))
-	mux.Handle("GET /api/v1/organizations/{organization_id}/documents/{document_id}", requireSession(authentication, auditor, http.HandlerFunc(getDocumentHandler(resourceService, auditor))))
-	mux.Handle("PATCH /api/v1/organizations/{organization_id}/documents/{document_id}", requireSession(authentication, auditor, http.HandlerFunc(updateDocumentHandler(resourceService, auditor))))
-	mux.Handle("DELETE /api/v1/organizations/{organization_id}/documents/{document_id}", requireSession(authentication, auditor, http.HandlerFunc(deleteDocumentHandler(resourceService, auditor))))
+func registerResourceRoutes(mux *http.ServeMux, authentication *auth.Service, tokens *serviceaccounts.Service, resourceService *resources.Service, auditor *audit.Service) {
+	human := func(next http.Handler) http.Handler {
+		return AuthenticatePrincipal(authentication, tokens, auditor, requireHumanPrincipal(auditor, next))
+	}
+	mux.Handle("POST /api/v1/organizations", human(http.HandlerFunc(createOrganizationHandler(resourceService, auditor))))
+	mux.Handle("POST /api/v1/organizations/{organization_id}/documents", human(http.HandlerFunc(createDocumentHandler(resourceService, auditor))))
+	mux.Handle("GET /api/v1/organizations/{organization_id}/documents/{document_id}", AuthenticatePrincipal(authentication, tokens, auditor, http.HandlerFunc(getDocumentHandler(resourceService, auditor))))
+	mux.Handle("PATCH /api/v1/organizations/{organization_id}/documents/{document_id}", human(http.HandlerFunc(updateDocumentHandler(resourceService, auditor))))
+	mux.Handle("DELETE /api/v1/organizations/{organization_id}/documents/{document_id}", human(http.HandlerFunc(deleteDocumentHandler(resourceService, auditor))))
 }
 
 func createOrganizationHandler(service *resources.Service, auditor *audit.Service) http.HandlerFunc {
@@ -87,29 +92,34 @@ func createDocumentHandler(service *resources.Service, auditor *audit.Service) h
 
 func getDocumentHandler(service *resources.Service, auditor *audit.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		user, ok := auth.UserFromContext(r.Context())
+		actor, ok := principal.FromContext(r.Context())
 		if !ok {
 			writeError(w, http.StatusUnauthorized, "unauthenticated", "authentication is required", r)
 			return
 		}
 		if service == nil {
-			recordAuditForUser(auditor, r, user, "document.read", "failure", http.StatusServiceUnavailable, "document", nil, map[string]any{"reason": "service_unavailable"})
+			recordAudit(auditor, r, "document.read", "failure", http.StatusServiceUnavailable, "document", nil, map[string]any{"reason": "service_unavailable"})
 			writeError(w, http.StatusServiceUnavailable, "resource_unavailable", "resource service is not configured", r)
 			return
 		}
 		organizationID, documentID, err := documentPathIDs(r)
 		if err != nil {
-			recordAuditForUser(auditor, r, user, "document.read", "failure", http.StatusBadRequest, "document", nil, map[string]any{"reason": "invalid_resource_id"})
+			recordAudit(auditor, r, "document.read", "failure", http.StatusBadRequest, "document", nil, map[string]any{"reason": "invalid_resource_id"})
 			writeError(w, http.StatusBadRequest, "invalid_resource_id", "organization or document id is invalid", r)
 			return
 		}
-		document, err := service.FindDocument(r.Context(), user.ID, organizationID, documentID)
+		var document resources.Document
+		if actor.Type == principal.ServiceAccount {
+			document, err = service.FindDocumentForServiceAccount(r.Context(), actor, organizationID, documentID)
+		} else {
+			document, err = service.FindDocument(r.Context(), actor.ID, organizationID, documentID)
+		}
 		if err != nil {
-			recordAuditForUser(auditor, r, user, "document.read", outcomeForStatus(resourceErrorStatus(err)), resourceErrorStatus(err), "document", &documentID, map[string]any{"organization_id": organizationID.String()})
+			recordAudit(auditor, r, "document.read", outcomeForStatus(resourceErrorStatus(err)), resourceErrorStatus(err), "document", &documentID, map[string]any{"organization_id": organizationID.String()})
 			writeResourceError(w, r, err)
 			return
 		}
-		recordAuditForUser(auditor, r, user, "document.read", "success", http.StatusOK, "document", &document.ID, map[string]any{"organization_id": organizationID.String()})
+		recordAudit(auditor, r, "document.read", "success", http.StatusOK, "document", &document.ID, map[string]any{"organization_id": organizationID.String()})
 		writeJSON(w, http.StatusOK, document)
 	}
 }

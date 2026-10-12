@@ -6,6 +6,7 @@ import (
 
 	"example.com/go-security-api/internal/audit"
 	"example.com/go-security-api/internal/auth"
+	"example.com/go-security-api/internal/principal"
 	"github.com/google/uuid"
 )
 
@@ -16,24 +17,30 @@ func recordAudit(auditor *audit.Service, r *http.Request, action, outcome string
 
 	actorType := "anonymous"
 	var actorID *uuid.UUID
-	if user, ok := auth.UserFromContext(r.Context()); ok {
+	var actorServiceAccountID *uuid.UUID
+	if value, ok := principal.FromContext(r.Context()); ok && value.Type == principal.ServiceAccount {
+		actorType = principal.ServiceAccount
+		id := value.ID
+		actorServiceAccountID = &id
+	} else if user, ok := auth.UserFromContext(r.Context()); ok {
 		actorType = "human"
 		id := user.ID
 		actorID = &id
 	}
 
 	_ = auditor.Record(r.Context(), audit.Entry{
-		RequestID:    requestIDFromContextValue(r.Context()),
-		ActorType:    actorType,
-		ActorID:      actorID,
-		Action:       action,
-		Outcome:      outcome,
-		HTTPMethod:   r.Method,
-		Route:        requestRoute(r),
-		StatusCode:   status,
-		ResourceType: resourceType,
-		ResourceID:   resourceID,
-		Metadata:     safeAuditMetadata(metadata),
+		RequestID:             requestIDFromContextValue(r.Context()),
+		ActorType:             actorType,
+		ActorID:               actorID,
+		ActorServiceAccountID: actorServiceAccountID,
+		Action:                action,
+		Outcome:               outcome,
+		HTTPMethod:            r.Method,
+		Route:                 requestRoute(r),
+		StatusCode:            status,
+		ResourceType:          resourceType,
+		ResourceID:            resourceID,
+		Metadata:              safeAuditMetadata(metadata),
 	})
 }
 
