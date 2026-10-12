@@ -17,6 +17,7 @@ type Config struct {
 	AppEnvironment       string
 	PasswordResetTTL     time.Duration
 	PasswordResetURLBase string
+	APITokenPepper       string
 }
 
 func Load() (Config, error) {
@@ -41,6 +42,10 @@ func Load() (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
+	apiTokenPepper := os.Getenv("API_TOKEN_PEPPER")
+	if apiTokenPepper == "" {
+		return Config{}, errors.New("API_TOKEN_PEPPER is required")
+	}
 
 	return Config{
 		HTTPAddr:             getenv("HTTP_ADDR", ":8080"),
@@ -52,6 +57,7 @@ func Load() (Config, error) {
 		AppEnvironment:       getenv("APP_ENV", "development"),
 		PasswordResetTTL:     passwordResetTTL,
 		PasswordResetURLBase: getenv("PASSWORD_RESET_URL_BASE", "http://localhost:8080"),
+		APITokenPepper:       apiTokenPepper,
 	}, nil
 }
 

@@ -8,18 +8,19 @@ import (
 )
 
 type Entry struct {
-	RequestID    string
-	ActorType    string
-	ActorID      *uuid.UUID
-	Action       string
-	Outcome      string
-	HTTPMethod   string
-	Route        string
-	StatusCode   int
-	ResourceType string
-	ResourceID   *uuid.UUID
-	Metadata     map[string]any
-	CreatedAt    time.Time
+	RequestID             string
+	ActorType             string
+	ActorID               *uuid.UUID
+	ActorServiceAccountID *uuid.UUID
+	Action                string
+	Outcome               string
+	HTTPMethod            string
+	Route                 string
+	StatusCode            int
+	ResourceType          string
+	ResourceID            *uuid.UUID
+	Metadata              map[string]any
+	CreatedAt             time.Time
 }
 
 type Store interface {

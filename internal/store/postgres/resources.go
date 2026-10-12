@@ -111,6 +111,24 @@ func (s *DocumentStore) FindVisibleDocument(ctx context.Context, organizationID,
 	return document, nil
 }
 
+func (s *DocumentStore) FindDocumentInOrganization(ctx context.Context, organizationID, documentID uuid.UUID) (resources.Document, error) {
+	var document resources.Document
+	err := s.database.QueryRow(ctx, `
+		SELECT id, organization_id, owner_id, title, content, created_at, updated_at
+		FROM documents WHERE id = $1 AND organization_id = $2
+	`, documentID, organizationID).Scan(
+		&document.ID, &document.OrganizationID, &document.OwnerID, &document.Title, &document.Content,
+		&document.CreatedAt, &document.UpdatedAt,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return resources.Document{}, resources.ErrDocumentNotFound
+	}
+	if err != nil {
+		return resources.Document{}, fmt.Errorf("find organization document: %w", err)
+	}
+	return document, nil
+}
+
 func (s *DocumentStore) UpdateDocument(ctx context.Context, organizationID, documentID, userID uuid.UUID, title, content string) (resources.Document, error) {
 	var document resources.Document
 	err := s.database.QueryRow(ctx, `

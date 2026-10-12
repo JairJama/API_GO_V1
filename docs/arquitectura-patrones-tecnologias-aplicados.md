@@ -21,7 +21,7 @@ Spatie Permission    -> roles + permissions + stores RBAC
 Teams / Workspaces   -> organizations + organization_users
 Policies             -> resources.Service
 Activity Log         -> audit.Service + audit_logs
-Sanctum              -> pendiente para el Paso 8
+Sanctum              -> serviceaccounts.Service + api_tokens
 ```
 
 El patrón es independiente del paquete que lo implementa. Por ejemplo, Sanctum es una implementación concreta de tokens opacos; el patrón general es una credencial revocable, con hash en base de datos y vencimiento.
@@ -45,9 +45,9 @@ El patrón es independiente del paquete que lo implementa. Por ejemplo, Sanctum 
 | Auditoría append-only | `audit_logs` y trigger de inmutabilidad | Implementado |
 | Request ID | Middleware y campo `request_id` | Implementado |
 | No registrar secretos | Filtro `safeAuditMetadata` | Implementado |
-| Reset hash-only | Previsto en el documento fuente | Pendiente Paso 4 |
-| Token opaco Bearer | Previsto en el documento fuente | Pendiente Paso 8 |
-| Cuentas técnicas | Previsto en el documento fuente | Pendiente Paso 8 |
+| Reset hash-only | `password_reset_tokens` y `passwordreset.Service` | Implementado |
+| Token opaco Bearer | `api_tokens`, HMAC-SHA256 y `AuthenticatePrincipal` | Implementado |
+| Cuentas técnicas | `service_accounts`, roles, permisos y scopes | Implementado |
 
 ## 4. Arquitectura aplicada
 
@@ -274,4 +274,3 @@ Identidad
     -> policy del recurso
     -> auditoría
 ```
-

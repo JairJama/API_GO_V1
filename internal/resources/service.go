@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"example.com/go-security-api/internal/access"
+	"example.com/go-security-api/internal/principal"
 	"github.com/google/uuid"
 )
 
@@ -24,6 +25,7 @@ type OrganizationStore interface {
 type DocumentStore interface {
 	CreateDocument(ctx context.Context, organizationID, ownerID uuid.UUID, title, content string) (Document, error)
 	FindVisibleDocument(ctx context.Context, organizationID, documentID, userID uuid.UUID) (Document, error)
+	FindDocumentInOrganization(ctx context.Context, organizationID, documentID uuid.UUID) (Document, error)
 	UpdateDocument(ctx context.Context, organizationID, documentID, userID uuid.UUID, title, content string) (Document, error)
 	DeleteDocument(ctx context.Context, organizationID, documentID, userID uuid.UUID) (Document, error)
 }
@@ -76,6 +78,20 @@ func (s *Service) FindDocument(ctx context.Context, userID, organizationID, docu
 		return Document{}, errors.New("document store is not configured")
 	}
 	return s.documents.FindVisibleDocument(ctx, organizationID, documentID, userID)
+}
+
+// FindDocumentForServiceAccount supports the read-only technical principal scope.
+func (s *Service) FindDocumentForServiceAccount(ctx context.Context, actor principal.Principal, organizationID, documentID uuid.UUID) (Document, error) {
+	if actor.Type != principal.ServiceAccount || actor.OrganizationID != organizationID {
+		return Document{}, ErrDocumentNotFound
+	}
+	if !actor.Has("documents.read") {
+		return Document{}, ErrForbidden
+	}
+	if s.documents == nil {
+		return Document{}, errors.New("document store is not configured")
+	}
+	return s.documents.FindDocumentInOrganization(ctx, organizationID, documentID)
 }
 
 func (s *Service) UpdateDocument(ctx context.Context, userID, organizationID, documentID uuid.UUID, title, content *string) (Document, error) {

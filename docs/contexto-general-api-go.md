@@ -19,7 +19,7 @@ Nginx reverse proxy :8080
     v
 API Go con net/http :8080
     |
-    +--> autenticación y sesiones
+    +--> autenticación, sesiones y tokens Bearer
     +--> autorización RBAC
     +--> organizaciones y documentos
     +--> auditoría
@@ -55,6 +55,8 @@ Migraciones actuales:
 002_sessions.sql
 003_rbac.sql
 004_audit_logs.sql
+005_password_reset_tokens.sql
+006_service_accounts_tokens.sql
 ```
 
 Las migraciones se embeben con `embed.FS` y se controlan mediante `schema_migrations`.
@@ -95,6 +97,10 @@ permissions
 role_permissions
 user_roles
 user_permissions
+service_accounts
+service_account_roles
+service_account_permissions
+api_tokens
 ```
 
 Permisos implementados:
